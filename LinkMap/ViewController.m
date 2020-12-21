@@ -206,6 +206,7 @@
         searchKey = _searchField.stringValue;
     });
     NSString * title = [NSString stringWithFormat:@"%@ \n\n searchKey: %@ \n文件大小\t\t文件名称\r\n\r\n",_linkMapFileURL.path,searchKey];
+    NSUInteger headerlength = title.length;
     self.result = [title mutableCopy];
     
     for(SymbolModel *symbol in symbols) {
@@ -220,6 +221,7 @@
         }
     }
     
+    [_result insertString:[NSString stringWithFormat:@"\n总大小: %.2fM\n",(totalSize/1024.0/1024.0)] atIndex:headerlength];
     [_result appendFormat:@"\r\n总大小: %.2fM\r\n",(totalSize/1024.0/1024.0)];
 }
 
