@@ -24,7 +24,7 @@
 @property (strong) NSString *linkMapContent;
 
 @property (strong) NSMutableString *result;//分析的结果
-
+@property (nonatomic, strong) NSDictionary *symbolMap;
 @end
 
 @implementation ViewController
@@ -72,6 +72,10 @@
         }
     }];
 }
+- (IBAction)resetbtnTap:(id)sender {
+    self.symbolMap = nil;
+    self.contentTextView.string = @"";
+}
 
 - (IBAction)analyze:(id)sender {
     if (!_linkMapFileURL || ![[NSFileManager defaultManager] fileExistsAtPath:[_linkMapFileURL path] isDirectory:nil]) {
@@ -80,6 +84,11 @@
     }
     NSString *searchKey = _searchField.stringValue;
     [NSUserDefaults.standardUserDefaults setObject:searchKey forKey:@"searchFieldHistory"];
+    
+    NSString * oldpath = [NSUserDefaults.standardUserDefaults objectForKey:@"linkMapFileURLHistory"];
+    if (![oldpath isEqualToString:_linkMapFileURL.path]) {
+        self.symbolMap = nil;
+    }
     [NSUserDefaults.standardUserDefaults setObject:_linkMapFileURL.path forKey:@"linkMapFileURLHistory"];
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -98,7 +107,11 @@
             
         });
         
-        NSDictionary *symbolMap = [self symbolMapFromContent:content];
+        if (!self.symbolMap) {
+            NSDictionary *symbolMap = [self symbolMapFromContent:content];
+            self.symbolMap = symbolMap;
+        }
+        NSDictionary *symbolMap  = self.symbolMap;
         
         NSArray <SymbolModel *>*symbols = [symbolMap allValues];
         
@@ -186,14 +199,14 @@
 }
 
 - (void)buildResultWithSymbols:(NSArray *)symbols {
-    self.result = [@"文件大小\t文件名称\r\n\r\n" mutableCopy];
-    NSUInteger totalSize = 0;
     
+    NSUInteger totalSize = 0;
     __block NSString *searchKey;
     dispatch_sync(dispatch_get_main_queue(), ^{
         searchKey = _searchField.stringValue;
     });
-
+    NSString * title = [NSString stringWithFormat:@"%@ \n\n searchKey: %@ \n文件大小\t\t文件名称\r\n\r\n",_linkMapFileURL.path,searchKey];
+    self.result = [title mutableCopy];
     
     for(SymbolModel *symbol in symbols) {
         if (searchKey.length > 0) {
@@ -271,8 +284,11 @@
             NSURL*  theDoc = [[panel URLs] objectAtIndex:0];
             NSMutableString *content =[[NSMutableString alloc]initWithCapacity:0];
             [content appendString:[theDoc path]];
-            [content appendString:@"/linkMap.txt"];
+            NSTimeInterval timeint = [[NSDate date] timeIntervalSince1970];
+            NSString * fileName = [NSString stringWithFormat:@"/linkeMap-%.0f.txt",timeint*1000];
+            [content appendString:fileName];
             [_result writeToFile:content atomically:YES encoding:NSUTF8StringEncoding error:nil];
+            [self showAlertWithText:[NSString stringWithFormat:@"已保存为%@",fileName]];
         }
     }];
 }
